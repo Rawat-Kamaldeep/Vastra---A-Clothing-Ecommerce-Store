@@ -422,6 +422,13 @@ app.delete('/api/admin/products/:id', requireAdmin, (req, res) => {
 
 app.get('/api/health', (req, res) => res.json({ ok: true }));
 
+const path = require('path');
+
+// Default route
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'vastra-ecommerce-clone.html'));
+});
+
 const PORT = process.env.PORT || 4000;
 app.listen(PORT, () => {
   console.log(`VASTRA backend running on http://localhost:${PORT}`);
