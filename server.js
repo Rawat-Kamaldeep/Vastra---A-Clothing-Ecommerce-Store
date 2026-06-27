@@ -429,6 +429,10 @@ app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'vastra-ecommerce-clone.html'));
 });
 
+app.get('/admin', (req, res) => {
+  res.sendFile(path.join(__dirname, 'admin.html'));
+});
+
 const PORT = process.env.PORT || 4000;
 app.listen(PORT, () => {
   console.log(`VASTRA backend running on http://localhost:${PORT}`);
