@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VASTRA Admin — Orders</title>
+<style>
+  :root{
+    --cream:#FBF7F2; --ink:#1C1A1D; --coral:#E8412C; --line:#E6DFD6; --muted:#8A8076;
+    --green:#1A7A3C; --red:#C0392B; --amber:#D8A13A;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--cream);color:var(--ink);font-family:'Helvetica Neue',Arial,sans-serif;}
+  header{background:#fff;border-bottom:1px solid var(--line);padding:18px 32px;display:flex;justify-content:space-between;align-items:center;}
+  .logo{font-weight:900;font-size:20px;letter-spacing:-0.02em;text-transform:uppercase;}
+  .logo span{color:var(--coral);}
+  .wrap{max-width:1100px;margin:0 auto;padding:28px 32px 60px;}
+  .gate{max-width:380px;margin:80px auto;background:#fff;border:1px solid var(--line);border-radius:8px;padding:32px;text-align:center;}
+  .gate h2{margin:0 0 6px;font-size:18px;}
+  .gate p{color:var(--muted);font-size:12.5px;margin:0 0 20px;}
+  .gate input{width:100%;padding:11px 13px;border:1px solid var(--line);border-radius:5px;font-size:13.5px;margin-bottom:12px;outline:none;}
+  .gate button, .refresh-btn{background:var(--ink);color:#fff;border:none;padding:11px 18px;border-radius:5px;font-size:12.5px;font-weight:800;text-transform:uppercase;letter-spacing:0.05em;cursor:pointer;width:100%;}
+  .err{color:var(--red);font-size:12px;margin-top:8px;display:none;}
+
+  .toprow{display:flex;justify-content:space-between;align-items:center;margin-bottom:22px;flex-wrap:wrap;gap:12px;}
+  .toprow h1{font-size:22px;margin:0;text-transform:uppercase;letter-spacing:-0.01em;}
+  .stats{display:flex;gap:14px;margin-bottom:24px;flex-wrap:wrap;}
+  .stat{background:#fff;border:1px solid var(--line);border-radius:8px;padding:16px 20px;min-width:140px;}
+  .stat .num{font-size:24px;font-weight:900;}
+  .stat .lab{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.05em;font-weight:700;}
+
+  table{width:100%;border-collapse:collapse;background:#fff;border:1px solid var(--line);border-radius:8px;overflow:hidden;}
+  thead th{text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:0.05em;color:var(--muted);font-weight:800;padding:12px 16px;border-bottom:1px solid var(--line);background:#fbf9f6;}
+  tbody td{padding:13px 16px;font-size:13px;border-bottom:1px solid var(--line);vertical-align:top;}
+  tbody tr:last-child td{border-bottom:none;}
+  tbody tr:hover{background:#fcfaf7;}
+  .pill{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.03em;}
+  .pill.paid{background:#E6F4EA;color:var(--green);}
+  .pill.created{background:#FCF1DC;color:var(--amber);}
+  .pill.verification_failed{background:#FBE7E5;color:var(--red);}
+  .oid{font-family:monospace;font-size:11.5px;color:var(--muted);}
+  .items-list{font-size:12px;color:var(--muted);max-width:260px;}
+  .empty{padding:60px 20px;text-align:center;color:var(--muted);}
+  .refresh-btn{width:auto;padding:10px 18px;}
+
+  .tabs{display:flex;gap:6px;margin-bottom:20px;border-bottom:1px solid var(--line);}
+  .tab-btn{padding:11px 18px;font-size:12.5px;font-weight:800;text-transform:uppercase;letter-spacing:0.04em;color:var(--muted);border-bottom:2px solid transparent;}
+  .tab-btn.active{color:var(--ink);border-bottom-color:var(--coral);}
+  .tab-panel{display:none;}
+  .tab-panel.active{display:block;}
+
+  .product-form{background:#fff;border:1px solid var(--line);border-radius:8px;padding:20px 22px;margin-bottom:24px;}
+  .product-form h3{margin:0 0 14px;font-size:14px;text-transform:uppercase;letter-spacing:0.03em;}
+  .form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:12px;}
+  .form-grid label{display:block;font-size:11px;color:var(--muted);text-transform:uppercase;font-weight:700;letter-spacing:0.04em;margin-bottom:5px;}
+  .form-grid input, .form-grid select{width:100%;padding:9px 10px;border:1px solid var(--line);border-radius:5px;font-size:13px;outline:none;}
+  .save-btn{background:var(--coral);color:#fff;border:none;padding:11px 22px;border-radius:5px;font-size:12.5px;font-weight:800;text-transform:uppercase;letter-spacing:0.05em;cursor:pointer;}
+  .cancel-link{font-size:12px;font-weight:700;color:var(--muted);margin-left:14px;cursor:pointer;}
+  .pswatch{display:inline-block;width:14px;height:14px;border-radius:50%;margin-right:6px;vertical-align:-2px;border:1px solid var(--line);}
+  .edit-link{color:var(--ink);font-weight:700;font-size:12px;margin-right:12px;cursor:pointer;}
+  .del-link{color:var(--red);font-weight:700;font-size:12px;cursor:pointer;}
+  .formmsg{font-size:12px;margin-top:8px;display:none;}
+  .formmsg.err{color:var(--red);}
+  .formmsg.ok{color:var(--green);}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">VASTRA<span>.</span> Admin</div>
+  <button class="refresh-btn" id="logoutBtn" style="width:auto;background:#fff;color:var(--ink);border:1px solid var(--line);display:none;">Log out</button>
+</header>
+
+<div id="gateView" class="gate">
+  <h2>Admin Access</h2>
+  <p>Enter your admin key to view orders.</p>
+  <input type="password" id="adminKeyInput" placeholder="Admin key">
+  <button onclick="login()">View Orders</button>
+  <div class="err" id="gateErr">Incorrect key or server unreachable.</div>
+</div>
+
+<div class="wrap" id="dashView" style="display:none;">
+  <div class="tabs">
+    <button class="tab-btn active" data-tab="orders" onclick="switchTab('orders')">Orders</button>
+    <button class="tab-btn" data-tab="products" onclick="switchTab('products')">Products</button>
+  </div>
+
+  <div class="tab-panel active" id="ordersPanel">
+    <div class="toprow">
+      <h1>Orders</h1>
+      <button class="refresh-btn" style="width:auto;" onclick="loadOrders()">Refresh</button>
+    </div>
+
+    <div class="stats" id="statsRow"></div>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Order ID</th>
+          <th>Items</th>
+          <th>Amount</th>
+          <th>Status</th>
+          <th>Placed</th>
+        </tr>
+      </thead>
+      <tbody id="ordersBody"></tbody>
+    </table>
+  </div>
+
+  <div class="tab-panel" id="productsPanel">
+    <div class="toprow">
+      <h1>Products</h1>
+      <button class="refresh-btn" style="width:auto;" onclick="loadProducts()">Refresh</button>
+    </div>
+
+    <div class="product-form">
+      <h3 id="formTitle">Add a product</h3>
+      <input type="hidden" id="editingId" value="">
+      <div class="form-grid">
+        <div><label>Category</label>
+          <select id="f_category">
+            <option>Men</option><option>Women</option><option>Kids</option>
+            <option>Footwear</option><option>Accessories</option><option>Beauty</option>
+          </select>
+        </div>
+        <div><label>Gender</label>
+          <select id="f_gender"><option>Men</option><option>Women</option><option>Kids</option></select>
+        </div>
+        <div><label>Brand</label><input id="f_brand" placeholder="e.g. Roadster"></div>
+        <div><label>Product name</label><input id="f_name" placeholder="e.g. Slim Fit Jeans"></div>
+        <div><label>Colour</label>
+          <select id="f_color"></select>
+        </div>
+        <div><label>Price (₹)</label><input id="f_price" type="number" min="1" placeholder="999"></div>
+        <div><label>MRP (₹)</label><input id="f_mrp" type="number" min="1" placeholder="1499"></div>
+        <div><label>Sizes (comma separated)</label><input id="f_sizes" placeholder="S, M, L, XL"></div>
+      </div>
+      <label style="display:block;margin-top:14px;">Image / Video URLs (one per line — paste direct links to .jpg/.png images or .mp4 videos)</label>
+      <textarea id="f_media" rows="4" placeholder="https://example.com/photo1.jpg&#10;https://example.com/clip.mp4&#10;https://example.com/photo2.jpg" style="width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:5px;font-size:13px;margin-top:6px;font-family:inherit;resize:vertical;"></textarea>
+      <div style="font-size:11.5px;color:var(--muted);margin-top:4px;">Video files (.mp4, .webm, .mov) are auto-detected by their extension — everything else is treated as an image.</div>
+      <button class="save-btn" onclick="saveProduct()" style="margin-top:14px;">Save Product</button>
+      <span class="cancel-link" id="cancelEditLink" style="display:none;" onclick="resetForm()">Cancel edit</span>
+      <div class="formmsg" id="formMsg"></div>
+    </div>
+
+    <table>
+      <thead>
+        <tr>
+          <th>ID</th><th>Product</th><th>Category</th><th>Colour</th><th>Price</th><th>MRP</th><th>Rating</th><th>Media</th><th></th>
+        </tr>
+      </thead>
+      <tbody id="productsBody"></tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+const API_BASE_URL = 'http://localhost:4000';
+let adminKey = '';
+
+function login(){
+  adminKey = document.getElementById('adminKeyInput').value.trim();
+  if(!adminKey) return;
+  loadOrders(true);
+}
+
+async function loadOrders(isLogin){
+  const errEl = document.getElementById('gateErr');
+  errEl.style.display='none';
+  try{
+    const res = await fetch(`${API_BASE_URL}/api/admin/orders`, {
+      headers: { 'x-admin-key': adminKey }
+    });
+    if(res.status === 401){
+      errEl.style.display='block';
+      return;
+    }
+    if(!res.ok) throw new Error('Server error');
+    const data = await res.json();
+    showDashboard();
+    renderOrders(data.orders);
+  }catch(err){
+    errEl.textContent = 'Could not reach the backend — is it running?';
+    errEl.style.display='block';
+  }
+}
+
+function showDashboard(){
+  document.getElementById('gateView').style.display='none';
+  document.getElementById('dashView').style.display='block';
+  document.getElementById('logoutBtn').style.display='block';
+}
+
+function switchTab(tab){
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.toggle('active', b.dataset.tab===tab));
+  document.getElementById('ordersPanel').classList.toggle('active', tab==='orders');
+  document.getElementById('productsPanel').classList.toggle('active', tab==='products');
+  if(tab==='products') loadProducts();
+}
+
+const COLOR_HEX = {
+  Black:'#1C1A1D', White:'#F2EFE9', Red:'#C0392B', Blue:'#2E5C8A',
+  Beige:'#C9B79C', Green:'#3C6E47', Pink:'#D9658A', Yellow:'#D4A017'
+};
+(function populateColorSelect(){
+  const sel = document.getElementById('f_color');
+  Object.keys(COLOR_HEX).forEach(c=>{
+    const opt = document.createElement('option');
+    opt.value = c; opt.textContent = c;
+    sel.appendChild(opt);
+  });
+})();
+
+function renderOrders(list){
+  const paidOrders = list.filter(o=>o.status==='paid');
+  const totalRevenue = paidOrders.reduce((s,o)=>s+o.amount,0);
+  document.getElementById('statsRow').innerHTML = `
+    <div class="stat"><div class="num">${list.length}</div><div class="lab">Total Orders</div></div>
+    <div class="stat"><div class="num">${paidOrders.length}</div><div class="lab">Paid Orders</div></div>
+    <div class="stat"><div class="num">₹${totalRevenue}</div><div class="lab">Revenue</div></div>
+  `;
+
+  const body = document.getElementById('ordersBody');
+  if(list.length===0){
+    body.innerHTML = `<tr><td colspan="5"><div class="empty">No orders yet. They'll show up here the moment someone checks out.</div></td></tr>`;
+    return;
+  }
+  body.innerHTML = list.map(o=>{
+    const itemsText = (o.items||[]).map(i=>`#${i.productId} ×${i.qty}`).join(', ');
+    const date = new Date(o.createdAt);
+    return `
+      <tr>
+        <td class="oid">${o.orderId}</td>
+        <td class="items-list">${itemsText}</td>
+        <td><strong>₹${o.amount}</strong></td>
+        <td><span class="pill ${o.status}">${o.status.replace('_',' ')}</span></td>
+        <td>${date.toLocaleDateString()} ${date.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}</td>
+      </tr>
+    `;
+  }).join('');
+}
+
+document.getElementById('logoutBtn').onclick = ()=>{
+  adminKey='';
+  document.getElementById('gateView').style.display='block';
+  document.getElementById('dashView').style.display='none';
+  document.getElementById('logoutBtn').style.display='none';
+  document.getElementById('adminKeyInput').value='';
+};
+
+document.getElementById('adminKeyInput').addEventListener('keydown', (e)=>{ if(e.key==='Enter') login(); });
+
+/* ---------- PRODUCTS ---------- */
+let allProducts = [];
+
+async function loadProducts(){
+  try{
+    const res = await fetch(`${API_BASE_URL}/api/products`);
+    const data = await res.json();
+    allProducts = data.products || [];
+    renderProducts();
+  }catch(err){
+    document.getElementById('productsBody').innerHTML = `<tr><td colspan="9"><div class="empty">Could not load products — is the backend running?</div></td></tr>`;
+  }
+}
+
+function renderProducts(){
+  const body = document.getElementById('productsBody');
+  if(allProducts.length===0){
+    body.innerHTML = `<tr><td colspan="9"><div class="empty">No products yet. Add your first one above.</div></td></tr>`;
+    return;
+  }
+  body.innerHTML = allProducts.map(p=>`
+    <tr>
+      <td>${p.id}</td>
+      <td><strong>${p.brand}</strong><br><span style="color:var(--muted);font-size:12px;">${p.name}</span></td>
+      <td>${p.category}</td>
+      <td><span class="pswatch" style="background:${COLOR_HEX[p.color]||'#ccc'}"></span>${p.color}</td>
+      <td>₹${p.price}</td>
+      <td>${p.mrp>p.price?`₹${p.mrp}`:'—'}</td>
+      <td>${p.avgRating ? `★ ${p.avgRating} (${p.reviewCount})` : '—'}</td>
+      <td>${(p.media||[]).length ? `${p.media.length} file${p.media.length===1?'':'s'}` : '—'}</td>
+      <td>
+        <span class="edit-link" onclick="editProduct(${p.id})">Edit</span>
+        <span class="del-link" onclick="deleteProduct(${p.id})">Delete</span>
+      </td>
+    </tr>
+  `).join('');
+}
+
+function editProduct(id){
+  const p = allProducts.find(x=>x.id===id);
+  if(!p) return;
+  document.getElementById('formTitle').textContent = `Edit product #${id}`;
+  document.getElementById('editingId').value = id;
+  document.getElementById('f_category').value = p.category;
+  document.getElementById('f_gender').value = p.gender;
+  document.getElementById('f_brand').value = p.brand;
+  document.getElementById('f_name').value = p.name;
+  document.getElementById('f_color').value = p.color;
+  document.getElementById('f_price').value = p.price;
+  document.getElementById('f_mrp').value = p.mrp;
+  document.getElementById('f_sizes').value = (p.sizes||[]).join(', ');
+  document.getElementById('f_media').value = (p.media||[]).map(m=>m.url).join('\n');
+  document.getElementById('cancelEditLink').style.display='inline';
+  document.querySelector('.product-form').scrollIntoView({behavior:'smooth'});
+}
+
+function resetForm(){
+  document.getElementById('formTitle').textContent = 'Add a product';
+  document.getElementById('editingId').value = '';
+  ['f_brand','f_name','f_price','f_mrp','f_sizes','f_media'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('cancelEditLink').style.display='none';
+}
+
+function showFormMsg(text, isError){
+  const el = document.getElementById('formMsg');
+  el.textContent = text;
+  el.className = 'formmsg ' + (isError ? 'err' : 'ok');
+  el.style.display = 'block';
+  setTimeout(()=>{ el.style.display='none'; }, 3000);
+}
+
+async function saveProduct(){
+  const id = document.getElementById('editingId').value;
+  const sizesRaw = document.getElementById('f_sizes').value.trim();
+  const mediaRaw = document.getElementById('f_media').value.trim();
+  const videoExt = /\.(mp4|webm|mov|ogg)(\?.*)?$/i;
+  const media = mediaRaw
+    ? mediaRaw.split('\n').map(l=>l.trim()).filter(Boolean).map(url=>({
+        url,
+        type: videoExt.test(url) ? 'video' : 'image'
+      }))
+    : [];
+
+  const payload = {
+    category: document.getElementById('f_category').value,
+    gender: document.getElementById('f_gender').value,
+    brand: document.getElementById('f_brand').value.trim(),
+    name: document.getElementById('f_name').value.trim(),
+    color: document.getElementById('f_color').value,
+    price: document.getElementById('f_price').value,
+    mrp: document.getElementById('f_mrp').value || document.getElementById('f_price').value,
+    sizes: sizesRaw ? sizesRaw.split(',').map(s=>s.trim()).filter(Boolean) : undefined,
+    media
+  };
+
+  if(!payload.brand || !payload.name || !payload.price){
+    showFormMsg('Brand, product name and price are required.', true);
+    return;
+  }
+
+  try{
+    const url = id ? `${API_BASE_URL}/api/admin/products/${id}` : `${API_BASE_URL}/api/admin/products`;
+    const method = id ? 'PUT' : 'POST';
+    const res = await fetch(url, {
+      method,
+      headers: { 'Content-Type':'application/json', 'x-admin-key': adminKey },
+      body: JSON.stringify(payload)
+    });
+    if(res.status === 401){ showFormMsg('Admin key rejected — please log in again.', true); return; }
+    if(!res.ok){ const d = await res.json(); throw new Error(d.error || 'Save failed'); }
+    showFormMsg(id ? 'Product updated.' : 'Product added.', false);
+    resetForm();
+    loadProducts();
+  }catch(err){
+    showFormMsg(err.message, true);
+  }
+}
+
+async function deleteProduct(id){
+  if(!confirm('Delete this product? This can\'t be undone.')) return;
+  try{
+    const res = await fetch(`${API_BASE_URL}/api/admin/products/${id}`, {
+      method:'DELETE',
+      headers:{ 'x-admin-key': adminKey }
+    });
+    if(!res.ok) throw new Error('Delete failed');
+    loadProducts();
+  }catch(err){
+    alert('Could not delete product.');
+  }
+}
+</script>
+</body>
+</html>
